@@ -6,6 +6,8 @@ import ollama
 import pytesseract
 import cv2
 import re
+import time
+import threading
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -13,7 +15,7 @@ class MainWindow(QWidget):
         self.setWindowTitle("Screenshot Analyzer")
 
         # Create widgets
-        self.capture_button = QPushButton("Capture Screenshot", self)
+        self.capture_button = QPushButton("Start Capture", self)
         self.output_textedit = QTextEdit(self)
         self.output_textedit.setReadOnly(True)
 
@@ -24,7 +26,19 @@ class MainWindow(QWidget):
         self.setLayout(layout)
 
         # Connect button click to function
-        self.capture_button.clicked.connect(self.capture_screenshot)
+        self.capture_button.clicked.connect(self.start_capture)
+
+        self.capturing = False
+
+    def start_capture(self):
+        self.capturing = True
+        self.capture_button.setEnabled(False)
+        self.capture_loop()
+
+    def capture_loop(self):
+        while self.capturing:
+            self.capture_screenshot()
+            time.sleep(20)
 
     def capture_screenshot(self):
         outfile = os.path.expanduser('~/Desktop/captured.png')
@@ -78,6 +92,7 @@ class MainWindow(QWidget):
             stream=True
         )
 
+        self.output_textedit.clear()
         for chunk in res:
             self.update_textbox(chunk['message']['content'])
             QApplication.processEvents()
@@ -85,11 +100,8 @@ class MainWindow(QWidget):
     def update_textbox(self, text):
         if text:
             current_text = self.output_textedit.toPlainText()
-            if current_text:
-                updated_text = current_text + text 
-            else:
-                updated_text = text  # Use just the new text if no existing text
-            self.output_textedit.setPlainText(updated_text)  # Set updated text to QTextEdit
+            updated_text = current_text + text if current_text else text
+            self.output_textedit.setPlainText(updated_text)  # Set updated text to 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
