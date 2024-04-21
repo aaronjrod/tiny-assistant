@@ -16,29 +16,53 @@ class MainWindow(QWidget):
 
         # Create widgets
         self.capture_button = QPushButton("Start Capture", self)
+        self.pause_button = QPushButton("Pause", self)
+        self.exit_button = QPushButton("Exit", self)
         self.output_textedit = QTextEdit(self)
         self.output_textedit.setReadOnly(True)
 
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(self.capture_button)
+        layout.addWidget(self.pause_button)
+        layout.addWidget(self.exit_button)
         layout.addWidget(self.output_textedit)
         self.setLayout(layout)
 
-        # Connect button click to function
+        # Connect button clicks to functions
         self.capture_button.clicked.connect(self.start_capture)
+        self.pause_button.clicked.connect(self.pause_capture)
+        self.exit_button.clicked.connect(self.exit_app)
 
         self.capturing = False
+        self.last_capture_time = 0
 
     def start_capture(self):
         self.capturing = True
         self.capture_button.setEnabled(False)
+        self.pause_button.setEnabled(True)
+        self.exit_button.setEnabled(True)
         self.capture_loop()
+
+    def pause_capture(self):
+        if self.capturing:
+            self.capturing = False
+            self.pause_button.setText("Resume")
+        else:
+            self.capturing = True
+            self.pause_button.setText("Pause")
+            self.capture_loop()
+
+    def exit_app(self):
+        self.capturing = False
+        self.close()
 
     def capture_loop(self):
         while self.capturing:
-            self.capture_screenshot()
-            time.sleep(20)
+            if time.time() - self.last_capture_time > 10:
+                self.last_capture_time = time.time()
+                self.capture_screenshot()
+                QApplication.processEvents()
 
     def capture_screenshot(self):
         outfile = os.path.expanduser('~/Desktop/captured.png')
@@ -84,7 +108,7 @@ class MainWindow(QWidget):
 
                     If it helps you infer what I'm doing or working on, here are the current words captured on the screen: {clean_text(text)}
                     
-                    Limit yourself to two suggestions. Begin your response starting with Suggestions:
+                    Limit yourself to two suggestions. Begin your response starting with Idea 1:
                     ''',
                     #'images': [outfile]
                 }
