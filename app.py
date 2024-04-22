@@ -1,5 +1,7 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QTextEdit, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QTextEdit, QVBoxLayout, QHBoxLayout, QLabel
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt
 import subprocess
 import os
 import ollama
@@ -12,30 +14,42 @@ import threading
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Screenshot Analyzer")
+        self.setWindowTitle("Tiny Assistant")
 
         # Create widgets
-        self.capture_button = QPushButton("Start Capture", self)
-        self.pause_button = QPushButton("Pause", self)
+        #self.capture_button = QPushButton("Start Capture", self)
+        self.pause_button = QPushButton("Resume", self)
         self.exit_button = QPushButton("Exit", self)
         self.output_textedit = QTextEdit(self)
         self.output_textedit.setReadOnly(True)
+        self.image_label = QLabel(self)
+        self.image_label.setAlignment(Qt.AlignCenter)
+
+        image_path = "clippy.png"
+        self.image_label.setPixmap(QPixmap(image_path))
 
         # Layout
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.image_label)
+        button_layout.addWidget(self.pause_button)
+        button_layout.addWidget(self.exit_button)
+        button_layout.setContentsMargins(0, 0, 0, 0)  # No margins between widgets
+
         layout = QVBoxLayout()
-        layout.addWidget(self.capture_button)
-        layout.addWidget(self.pause_button)
-        layout.addWidget(self.exit_button)
+        #layout.addWidget(self.capture_button)
+        layout.addLayout(button_layout)
         layout.addWidget(self.output_textedit)
         self.setLayout(layout)
 
         # Connect button clicks to functions
-        self.capture_button.clicked.connect(self.start_capture)
+        #self.capture_button.clicked.connect(self.start_capture)
         self.pause_button.clicked.connect(self.pause_capture)
         self.exit_button.clicked.connect(self.exit_app)
-
+    
+        # Initialize capture loop
         self.capturing = False
-        self.last_capture_time = 0
+        self.last_capture_time = time.time()
+        #self.capture_loop()
 
     def start_capture(self):
         self.capturing = True
@@ -59,10 +73,11 @@ class MainWindow(QWidget):
 
     def capture_loop(self):
         while self.capturing:
-            if time.time() - self.last_capture_time > 10:
-                self.last_capture_time = time.time()
-                self.capture_screenshot()
-                QApplication.processEvents()
+            self.capture_screenshot()
+            QApplication.processEvents()
+            if self.capturing:
+                time.sleep(2)
+                # 
 
     def capture_screenshot(self):
         outfile = os.path.expanduser('~/Desktop/captured.png')
@@ -100,17 +115,17 @@ class MainWindow(QWidget):
                 {
                     'role': 'user',
                     'content': f'''
-                    You are my quippy, insightful, and extremely creative service that analyzes screenshots and provides helpful insights or suggestions, similar to Clippy. 
+                    You are my extremely creative and insightful service that analyzes screenshots and provides helpful insights or suggestions, similar to Clippy. 
                     Analyze the screenshot image to identify any noteworthy elements, such as software open, text content on the screen, and user activities. 
-                    Keep responses short.
+                    
                     Do not give suggestions about multitasking, tabs, organization, or time management.
                     Do not give suggestions that are obvious to someone used to the internet. Provide insights that are profound and extremely creative based on what I'm doing.
 
                     If it helps you infer what I'm doing or working on, here are the current words captured on the screen: {clean_text(text)}
                     
-                    Limit yourself to two suggestions. Begin your response starting with Idea 1:
+                    Limit yourself to two suggestions, keep each short and to the point (2 sentences max). Tell me the action or suggestion only. Begin your response starting with Consider
                     ''',
-                    #'images': [outfile]
+                    #'images': [outfile] # Look at the image itself
                 }
             ],
             stream=True
